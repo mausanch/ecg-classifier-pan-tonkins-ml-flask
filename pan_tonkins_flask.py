@@ -41,6 +41,8 @@ log.addHandler(fileHandler)
 
 log.setLevel(logging.DEBUG)
 
+global time_stamp ,integration_signal, band_pass_signal, derivative_signal, square_signal
+
 class Pan_Tompkins_QRS():
 
   def low_pass_filter(self, signal):
@@ -321,14 +323,18 @@ def detect_peaks(ecg_signal, fs):
         
     return r_peaks
 
-
 QRS_detector = Pan_Tompkins_QRS()
 fs = 360
 
+
+
+time_stamp = []
 # METODO QUE LLAMA AL SCRIPT
 @service.route('/', methods=['POST'])
 @cross_origin()
 def procesamiento_ecg():
+    ecg_array=[]
+    time_stamp= []
     log.info('Procesamiento Iniciado')
     log.info("JSON RECIBIDO")
     log.info(request.form)
@@ -336,17 +342,27 @@ def procesamiento_ecg():
 
     request_data = request.get_json()
 
-    ecg_array=request_data['ecg']
-    
-    ecg_dataFrame = pd.DataFrame(ecg_array)
+    #ecg_array=request_data['electrocardiograma']
+    print (ecg_array)
+    for item in request_data['electrocardiograma']:
+        if item: 
+            ecg_array.append(float(item))
 
-    ecg_signal = ecg_dataFrame.iloc[:,1].to_numpy()
+    for i in range(len(ecg_array)):
+        time_stamp.append(i)
 
-    integration_signal, band_pass_signal, derivative_signal, square_signal  = QRS_detector.solve(ecg_signal.copy())
+    ecg_array = np.array(ecg_array)
 
-    r_peaks = detect_peaks(ecg_signal, fs)
+    #ecg_dataFrame = pd.DataFrame(ecg_array)
+    #ecg_signal = ecg_dataFrame.iloc[:,1].to_numpy()
+
+    integration_signal, band_pass_signal, derivative_signal, square_signal  = QRS_detector.solve(ecg_array.copy())
+
+    r_peaks = detect_peaks(ecg_array, fs)
     heart_beat = np.average(np.diff(r_peaks))/ fs
     print("Heart Rate: "+ str(60/heart_beat) + " BPM")
+    
+    #heart_beat="hola"
     return heart_beat
 
 
